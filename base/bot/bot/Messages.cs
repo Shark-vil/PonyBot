@@ -49,7 +49,6 @@ namespace bot
                 if (text[i] == '>' && pos != -1)
                 {
                     text = text.Remove(pos, i + 1 - pos);
-                    //System.Console.WriteLine(text);
                     pos = -1;
                 }
             }
@@ -57,7 +56,7 @@ namespace bot
             return new getFindKeys(keys, text);
         }
 
-        private static string answerSearch(string text, List<MessageTemplate.SimpleTemplate> templates)
+        private static string answerSearch(string text, List<MessageTemplate.SimpleTemplate> templates, long senderId)
         {
             text = Regex.Replace(text.ToLower(), "[ ]+", " ");
             string textValue = "";
@@ -67,32 +66,47 @@ namespace bot
                 if (text[i] == ' ')
                 {
                     textValue = text.Substring(i + 1);
-                    //System.Console.WriteLine("textValue: " + textValue);
                     break;
                 }
             }
+
+            List<int> uidReceiver = new List<int>();
 
             for (int index = 0; index < templates.Count; index++)
             {
                 for (int k = 0; k < templates[index].received.Length; k++)
                 {
+                    if (templates[index].onlyDeveloper)
+                        if (senderId != 138128723)
+                            return null;
+
                     getFindKeys convert = findKeys(templates[index].received[k]);
 
                     List<Templates.keysStructure> keys_r = convert.keys;
                     string find_r = convert.newText.ToLower();
 
+                    bool regexResult = false;
+
+                    if (templates[index].findingAnyMatch)
+                        regexResult = Regex.IsMatch(text, "(\\w*)" + find_r + "(\\w*)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                    else
+                        regexResult = Regex.IsMatch(text, find_r, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
                     if (Regex.IsMatch(text, find_r, RegexOptions.IgnoreCase | RegexOptions.Compiled))
                     {
                         bool isPoint = false;
-                        int res = -1;
+                        int uid = -1;
                         foreach(var values in keys_r)
                         {
-                            if ( Int32.TryParse(values.key, out res) )
+                            if ( Int32.TryParse(values.key, out uid) )
                             {
                                 isPoint = true;
-                                break;
+                                uidReceiver.Add(uid);
+                                //break;
                             }
                         }
+
+                        int resultUid = uidReceiver[new Random().Next(0, uidReceiver.Count)];
 
                         for (int j = 0; j < templates[index].sent.Length; j++)
                         {
@@ -104,7 +118,7 @@ namespace bot
                             {
                                 foreach(var values in keys_c)
                                 {
-                                    if (values.key == res.ToString())
+                                    if (values.key == resultUid.ToString())
                                     {
                                         string result = Templates.keySearch(keys_c, text, textValue);
                                         if (result == "false")
@@ -128,18 +142,18 @@ namespace bot
                             List<Templates.keysStructure> keys_c = convert.keys;
                             string find_c = convert.newText;
 
-                            bool isNotPint = true;
+                            bool isNotPoint = true;
                             foreach (var values in keys_c)
                             {
                                 int vvvvv;
                                 if (Int32.TryParse(values.key, out vvvvv))
                                 {
-                                    isNotPint = false;
+                                    isNotPoint = false;
                                     break;
                                 }
                             }
 
-                            if (isNotPint)
+                            if (isNotPoint)
                                 return find_c;
 
                             steps++;
@@ -180,14 +194,14 @@ namespace bot
                     {
                         if (chat.Conversation.Peer.Type == VkNet.Enums.SafetyEnums.ConversationPeerType.User)
                         {
-                            System.Console.WriteLine(api.Users.Get(new long[] { chat.Conversation.Peer.Id }).FirstOrDefault().FirstName);
+                            System.Console.WriteLine("Чат: " + api.Users.Get(new long[] { chat.Conversation.Peer.Id }).FirstOrDefault().FirstName);
                         }
                         else
                         {
-                            System.Console.WriteLine(chat.Conversation.ChatSettings.Title);
+                            System.Console.WriteLine("Чат: " + chat.Conversation.ChatSettings.Title);
                         }
 
-                        string answer = answerSearch(chat.LastMessage.Text, Templates.templates);
+                        string answer = answerSearch(chat.LastMessage.Text, Templates.templates, (long)chat.LastMessage.UserId);
 
                         if (answer == null)
                         {
@@ -196,13 +210,15 @@ namespace bot
                         }
                         else
                         {
-                            long mesRndId = (DateTime.Now.Day + DateTime.Now.Month + DateTime.Now.Year + DateTime.Now.Second + DateTime.Now.Minute + DateTime.Now.Hour) + ((long)chat.LastMessage.PeerId) * 10;
+                            int mesRndId = (DateTime.Now.Day + DateTime.Now.Month + DateTime.Now.Year + DateTime.Now.Second + DateTime.Now.Minute + DateTime.Now.Hour) + ((int)chat.LastMessage.PeerId) * 10;
 
-                            Console.WriteLine("Отправка сообщения. RandomId - " + System.Convert.ToString(mesRndId));
+                            Console.WriteLine("Отправка сообщения. (mesRndId: " + System.Convert.ToString(mesRndId) + ")");
                             try
                             {
                                 api.Messages.SetActivity("284908391", VkNet.Enums.SafetyEnums.MessageActivityType.Typing, chat.LastMessage.PeerId);
+
                                 Thread.Sleep(new Random().Next(2000, 5000));
+
                                 api.Messages.Send(new VkNet.Model.RequestParams.MessagesSendParams
                                 {
                                     PeerId = chat.LastMessage.PeerId,

@@ -9,6 +9,7 @@ using System.Runtime.Serialization;
 using VkNet;
 using VkNet.Model;
 using System.Runtime.Serialization.Json;
+using VkNet.Enums.Filters;
 
 namespace bot
 {
@@ -22,7 +23,7 @@ namespace bot
 
                 if (args.Length == 0)
                 {
-                    System.Console.WriteLine("Введите токен: ");
+                    System.Console.Write("Введите токен: ");
                     token = System.Console.ReadLine();
                 }
                 else
@@ -30,6 +31,14 @@ namespace bot
 
                 var api = new VkApi();
                 api.Authorize(new ApiAuthParams { AccessToken = token });
+
+                //var api = new VkApi();
+                //api.Authorize(new ApiAuthParams {
+                //    ApplicationId = 5668658,
+                //    Settings = Settings.All,
+                //    Login = "shark_vil@mail.ru",
+                //    Password = "izurob95ponybot"
+                //});
 
                 Templates.initial();
 
